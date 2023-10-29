@@ -6,13 +6,7 @@ import numpy as np
 
 # hard coded training inputs
 # note we are not currently looking at speed
-loss_functions = {'position' : 'euclidean_loss', 
-                  'head_direction' : 'cyclical_mae_rad', 
-                  'speed' : 'mae'}
 
-loss_weights = {'position' : 1, 
-                'head_direction' : 25, 
-                'speed' : 2}
 
 # first, need to get train and test times (splits)
 # using 5 splits in total (5-fold cross validation)
@@ -34,13 +28,13 @@ def get_cv_splits(h5_path, n_splits=5, n_timesteps=64, batch_size=8):
     training_indices = np.setdiff1d(exp_indices, cv_splits[n_splits-1])  # All except the test indices
     testing_indices = cv_splits[n_splits-1]
     time_indices = {}
-    time_indices['training_indices'] = training_indices
-    time_indices['testing_indices'] = testing_indices
+    time_indices['training'] = training_indices.tolist() 
+    time_indices['testing'] = testing_indices.tolist() 
 
     return time_indices
 
 
-def get_model_parameters(input_data_path, loss_functions):
+def get_model_parameters(input_data_path, loss_functions, loss_weights):
     params = dict()
     params['input_data_path'] = input_data_path  # Filepath for hdf5 file storing wavelets and outputs
     params['sampling_rate'] = 30  # Sampling rate of the wavelets
@@ -86,13 +80,3 @@ def get_model_parameters(input_data_path, loss_functions):
 
     return params
 
-
-
-if __name__ == "__main__":
-    loss_functions = {'position' : 'euclidean_loss',       # NOTE: not currently looking at speed
-                  'head_direction' : 'cyclical_mae_rad', 
-                  'speed' : 'mae'}
-    
-    loss_weights = {'position' : 1, 
-                'head_direction' : 25, 
-                'speed' : 2}

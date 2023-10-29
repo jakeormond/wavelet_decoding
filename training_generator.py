@@ -28,9 +28,9 @@ def create_train_and_test_generators(params, time_indices):
         Sequence class used for generating testing data
     """
     # 1.) Create training generator
-    training_generator = RawWaveletSequence(params, time_indices['training'])
+    training_generator = RawWaveletSequence(params, time_indices['training'], training=True)
     # 2.) Create testing generator
-    testing_generator = RawWaveletSequence(params, time_indices['testing'])
+    testing_generator = RawWaveletSequence(params, time_indices['testing'], training=False)
     # 3.) Assert that training and testing data are different
 
     return (training_generator, testing_generator)
@@ -60,7 +60,7 @@ class RawWaveletSequence(Sequence):
 
     """
 
-    def __init__(self, params, time_indices, training): # training is a boolean to indicate whether this is a training or testing generator
+    def __init__(self, params, time_indices, training=True): # training is a boolean to indicate whether this is a training or testing generator
         # 1.) Set all options as attributes
         self.set_params_as_attribute(params)
 
@@ -76,12 +76,13 @@ class RawWaveletSequence(Sequence):
 
         # 3.) Prepare for training
         self.training = training
-        self.prepare_data_generator(training=training)
+        self.prepare_data_generator(time_indices, training=training)
 
-    def __len__(self):
-        return len(self.cv_indices)
+    def __len__(self):   # from tensor flow documentation, this is number of batches in the sequence
+        # deepinsight code seems to set this as number of training examples, which I don't think is right
+        return len(self.time_indices)  
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx):  # gets batch at position idx
         # 1.) Define start and end index
 
         # cut_range should be a 2d array of shape (batch_size, model_timesteps) containing 
@@ -89,14 +90,14 @@ class RawWaveletSequence(Sequence):
         # each row is a training example - Jake
 
         if self.shuffle:
-            idx = np.random.choice(self.cv_indices)
+            idx = np.random.choice(self.time_indices)
         else:
-            idx = self.cv_indices[idx]
+            idx = self.time_indices[idx]
         cut_range = np.arange(idx, idx + self.sample_size) # sample size is length of 1 training example X batch size; is 64ts * 8training examples = 512
 
         # 2.) Above takes consecutive batches, implement random batching here
         if self.random_batches:
-            indices = np.random.choice(self.cv_indices, size=self.batch_size)
+            indices = np.random.choice(self.time_indices, size=self.batch_size)
             cut_range = [np.arange(start_index, start_index + self.model_timesteps) for start_index in indices]
             cut_range = np.array(cut_range)
         else:
@@ -150,12 +151,13 @@ class RawWaveletSequence(Sequence):
             # and a training example will be training_example x model_timesteps x 2
 
             # then it is reshaped to (batch_size*model_timesteps) x 3rd dimension (but 3rd dimension shouldn't always exist???!!!)
-            cut_data = np.reshape(cut_data, (cut_data.shape[0] * cut_data.shape[1], cut_data.shape[2]))
+            # seems unnecessary to me, it's already in the right shape
+            # cut_data = np.reshape(cut_data, (cut_data.shape[0] * cut_data.shape[1], cut_data.shape[2]))
 
             # 2.) Reshape for model output
-            if len(cut_data.shape) is not self.batch_size: # this line must be wrong!!!
+            # if len(cut_data.shape) is not self.batch_size: # this line must be wrong!!!
                 # reshaped to batch_size x model_timesteps x 3rd dimension (if it exists!!!)
-                cut_data = np.reshape(cut_data, (self.batch_size, self.model_timesteps, cut_data.shape[1]))
+            # cut_data = np.reshape(cut_data, (self.batch_size, self.model_timesteps, cut_data.shape[1]))
 
             # 3.) Divide evenly and make sure last output is being decoded
             if self.average_output: # this must be downsampling the output (the factor is 16, from 64 ts to 4)
@@ -165,33 +167,30 @@ class RawWaveletSequence(Sequence):
 
         return out_sample
 
-    def prepare_data_generator(self, training, time_indices):
+    def prepare_data_generator(self, time_indices, training):
         # 1.) Define sample size and means
         self.sample_size = self.model_timesteps * self.batch_size # each training example is 64 timesteps long, and 8 batches per step
-
-        if training:
-            self.cv_indices = time_indices['training_indices']
-        else:
-            self.cv_indices = time_indices['testing_indices']
+        self.time_indices = time_indices
+       
             
         # Make sure random choice takes from array not list 500x speedup
-        self.cv_indices = np.array(self.cv_indices)
+        self.time_indices = np.array(self.time_indices)
             
         # 9.) Calculate normalization for wavelets
-        meanstd_path = os.path.dirname(self.fp_hdf_out) + '/models/tmp/' + os.path.basename(self.fp_hdf_out)[:-3] + '_meanstd_start{}_end{}_tstart{}_tend{}.p'.format(
-            self.training_indices[0], self.training_indices[-1], self.testing_indices[0], self.testing_indices[-1])
+        # meanstd_path = os.path.dirname(self.fp_hdf_out) + '/models/tmp/' + os.path.basename(self.fp_hdf_out)[:-3] + '_meanstd_start{}_end{}_tstart{}_tend{}.p'.format(
+        #    self.training_indices[0], self.training_indices[-1], self.testing_indices[0], self.testing_indices[-1])
         
         # HAVE REMOVED MAD NORMALIZATION CODE BECAUSE I ALREADY RAN THE MAD NORMALIZATION
 
         # REMOVED NAN CODE BECAUSE THERE SHOULDN'T BE ANY NANs IN THE DATA
             
         # 10.) Define output shape. Most robust way is to get a dummy input and take that shape as output shape
-        (dummy_input, dummy_output) = self.__getitem__(0)
+        (dummy_input, _) = self.__getitem__(0)
         # Corresponds to the output of this generator, aka input to model. Also remove batch shape,
-        self.input_shape = dummy_input.shape[1:]
+        self.input_shape = dummy_input.shape[1:] # this should be number of timesteps in 1 example
 
-    def set_opts_as_attribute(self, opts):
-        for k, v in opts.items():
+    def set_params_as_attribute(self, params):
+        for k, v in params.items():
             setattr(self, k, v)
 
     def get_name(self):
