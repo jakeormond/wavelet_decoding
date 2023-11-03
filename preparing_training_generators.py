@@ -44,7 +44,7 @@ def get_model_parameters(input_data_path, loss_functions, loss_weights):
     params['model_timesteps'] = 64  # How many timesteps are used in the input layer, e.g. a sampling rate of 30 will yield 2.13s windows. Has to be divisible X times by 2. X='num_convs_tsr'
     params['num_convs_tsr'] = 4  # Number of downsampling steps within the model, e.g. with model_timesteps=64, it will downsample 64->32->16->8->4 and output 4 timesteps
     params['average_output'] = 2**params['num_convs_tsr']  # Whats the ratio between input and output shape
-    # params['channel_lower_limit'] = 2
+    params['channel_lower_limit'] = 2 # the value of the channel dimension at the end of the model after downsampling
 
     params['optimizer'] = 'adam'  # Learning algorithm
     params['learning_rate'] = 0.0007  # Learning rate
