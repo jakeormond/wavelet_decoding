@@ -53,7 +53,12 @@ def the_decoder(tg, show_summary=True):
         for d in range(0, tg.num_dense):
             x = Dense(tg.num_units_dense, activation=tg.act_fc, name='dense{}_combine{}'.format(d, key))(x)
             x = Dropout(tg.dropout_ratio)(x)
-        out = Dense(output.shape[1], name='{}'.format(key), activation=tg.last_layer_activation_function)(x)
+
+        if len(output.shape) == 1:
+             out = Dense(1, name='{}'.format(key), activation=tg.last_layer_activation_function)(x)
+        else: # shape is 2d
+            out = Dense(output.shape[1], name='{}'.format(key), activation=tg.last_layer_activation_function)(x)
+
         outputs.append(out)
 
     model = Model(inputs=model_input, outputs=outputs)

@@ -34,7 +34,8 @@ if np.array_equal(nan_indices['position'], nan_indices['hd']):
 nan_indices = nan_indices['position']
 
 # Open the existing HDF5 file in read mode
-ds_names = ['wave_mad_norm', 'position', 'hd']
+# ds_names = ['wave_mad_norm', 'position', 'hd']
+ds_names = ['position', 'hd']
 with h5py.File(input_data_path, 'r') as f:   
 
     for ds_name in ds_names:
@@ -58,7 +59,7 @@ with h5py.File(input_data_path, 'r') as f:
                 if ds_name == 'wave_mad_norm':
                     new_shape= (shape[0], shape[1] - nan_indices.shape[0], shape[2])
                 elif ds_name == 'position':
-                    new_shape = (shape[0] - nan_indices.shape[0], shape(1))
+                    new_shape = (shape[0] - nan_indices.shape[0], shape[1])
                 elif ds_name == 'hd':
                     new_shape = (shape[0] - nan_indices.shape[0])
 

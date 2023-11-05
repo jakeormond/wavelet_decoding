@@ -54,10 +54,6 @@ class RawWaveletSequence(Sequence):
         Batched output for model optimization
 
     --------------------
-
-
-
-
     """
 
     def __init__(self, params, time_indices, training=True): # training is a boolean to indicate whether this is a training or testing generator
@@ -193,10 +189,10 @@ class RawWaveletSequence(Sequence):
         for k, v in params.items():
             setattr(self, k, v)
 
-    def get_name(self):
-        name = ""
-        for attr in self.important_attributes:
-            name += attr + ':{},'.format(getattr(self, attr))
-        return name[:-1]
+    # def get_name(self): # not sure they actually implemented this properly
+    #     name = ""
+    #     for attr in self.important_attributes:
+    #         name += attr + ':{},'.format(getattr(self, attr))
+    #     return name[:-1]
     
     
